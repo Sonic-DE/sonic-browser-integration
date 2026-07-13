@@ -14,7 +14,7 @@
 #include <Purpose/AlternativesModel>
 #include <Purpose/Menu>
 
-PurposePlugin::PurposePlugin(QObject *parent)
+PurposePlugin::PurposePlugin(QObject* parent)
     : AbstractBrowserPlugin(QStringLiteral("purpose"), 1, parent)
 {
 }
@@ -30,7 +30,8 @@ bool PurposePlugin::onUnload()
     return true;
 }
 
-QJsonObject PurposePlugin::handleData(int serial, const QString &event, const QJsonObject &data)
+QJsonObject PurposePlugin::handleData(int serial, const QString& event,
+    const QJsonObject& data)
 {
     if (event == QLatin1String("share")) {
         if (m_pendingReplySerial != -1 || (m_menu && m_menu->isVisible())) {
@@ -43,7 +44,8 @@ QJsonObject PurposePlugin::handleData(int serial, const QString &event, const QJ
         // store request serial for asynchronous reply
         m_pendingReplySerial = serial;
 
-        // This is not in share data, our extension sends this by doing a HEAD request on the url, if applicable.
+        // This is not in share data, our extension sends this by doing a HEAD
+        // request on the url, if applicable.
         const QString mimeType = data.value(QStringLiteral("mimeType")).toString();
 
         const QJsonObject shareData = data.value(QStringLiteral("data")).toObject();
@@ -59,33 +61,27 @@ QJsonObject PurposePlugin::handleData(int serial, const QString &event, const QJ
 
         if (!m_menu) {
             m_menu.reset(new Purpose::Menu());
-            // HACK A popup window must have a proper parent but we cannot attach it to
-            // the browser window, so let's just make it a regular menu.
-            if (qGuiApp->platformName().startsWith(QLatin1String("wayland"))) {
-                m_menu->setWindowFlag(Qt::Popup, false);
-                // Hide when it loses focus.
-                m_menu->installEventFilter(this);
-            }
+            // HACK A popup window must have a proper parent but we cannot attach it
+            // to the browser window, so let's just make it a regular menu.
             m_menu->model()->setPluginType(QStringLiteral("ShareUrl"));
 
-            connect(m_menu.data(), &QMenu::aboutToShow, this, [this] {
-                m_menu->setProperty("actionInvoked", false);
-            });
+            connect(m_menu.data(), &QMenu::aboutToShow, this,
+                [this] { m_menu->setProperty("actionInvoked", false); });
 
             connect(m_menu.data(), &QMenu::aboutToHide, this, [this] {
-                // aboutToHide is emitted before an action is triggered and activeAction() is
-                // the action currently hovered. This means we can't properly tell that the prompt
-                // got canceled, when hovering an action and then hitting Escape to close the menu.
-                // Hence delaying this and checking if an action got invoked :(
+                // aboutToHide is emitted before an action is triggered and
+                // activeAction() is the action currently hovered. This means we can't
+                // properly tell that the prompt got canceled, when hovering an action
+                // and then hitting Escape to close the menu. Hence delaying this and
+                // checking if an action got invoked :(
 
                 QMetaObject::invokeMethod(
                     this,
                     [this] {
                         if (!m_menu->property("actionInvoked").toBool()) {
-                            sendPendingReply(false,
-                                             {
-                                                 {QStringLiteral("errorCode"), QStringLiteral("CANCELED")},
-                                             });
+                            sendPendingReply(false, {
+                                                        {QStringLiteral("errorCode"), QStringLiteral("CANCELED")},
+                                                    });
                         }
                     },
                     Qt::QueuedConnection);
@@ -99,27 +95,30 @@ QJsonObject PurposePlugin::handleData(int serial, const QString &event, const QJ
                 }
             });
 
-            connect(m_menu.data(), &Purpose::Menu::finished, this, [this](const QJsonObject &output, int errorCode, const QString &errorMessage) {
-                if (errorCode) {
-                    debug() << "Error:" << errorCode << errorMessage;
+            connect(m_menu.data(), &Purpose::Menu::finished, this,
+                [this](const QJsonObject& output, int errorCode,
+                    const QString& errorMessage) {
+                    if (errorCode) {
+                        debug() << "Error:" << errorCode << errorMessage;
 
-                    sendPendingReply(false,
-                                     {
-                                         {QStringLiteral("errorCode"), errorCode},
-                                         {QStringLiteral("errorMessage"), errorMessage},
-                                     });
-                    return;
-                }
+                        sendPendingReply(
+                            false, {
+                                       {QStringLiteral("errorCode"), errorCode},
+                                       {QStringLiteral("errorMessage"), errorMessage},
+                                   });
+                        return;
+                    }
 
-                const QString url = output.value(QStringLiteral("url")).toString();
-                if (!url.isEmpty()) {
-                    // Do this here rather than on the extension side to avoid having to request an additional permission after updating
-                    QGuiApplication::clipboard()->setText(url);
-                }
+                    const QString url = output.value(QStringLiteral("url")).toString();
+                    if (!url.isEmpty()) {
+                        // Do this here rather than on the extension side to avoid
+                        // having to request an additional permission after updating
+                        QGuiApplication::clipboard()->setText(url);
+                    }
 
-                debug() << "Finished:" << output;
-                sendPendingReply(true, {{QStringLiteral("response"), output}});
-            });
+                    debug() << "Finished:" << output;
+                    sendPendingReply(true, {{QStringLiteral("response"), output}});
+                });
         }
 
         QJsonObject shareJson;
@@ -163,7 +162,7 @@ QJsonObject PurposePlugin::handleData(int serial, const QString &event, const QJ
     return {};
 }
 
-void PurposePlugin::sendPendingReply(bool success, const QJsonObject &data)
+void PurposePlugin::sendPendingReply(bool success, const QJsonObject& data)
 {
     QJsonObject reply = data;
     reply.insert(QStringLiteral("success"), success);
@@ -172,7 +171,8 @@ void PurposePlugin::sendPendingReply(bool success, const QJsonObject &data)
     m_pendingReplySerial = -1;
 }
 
-void PurposePlugin::showShareMenu(const QJsonObject &data, const QString &mimeType)
+void PurposePlugin::showShareMenu(const QJsonObject& data,
+    const QString& mimeType)
 {
     QJsonObject shareData = data;
 
@@ -184,25 +184,25 @@ void PurposePlugin::showShareMenu(const QJsonObject &data, const QString &mimeTy
 
     debug() << "Share mime type" << mimeType << "with data" << data;
 
-    auto *alternativesModel = m_menu->model();
+    auto* alternativesModel = m_menu->model();
     alternativesModel->setInputData(shareData);
 
-    // Purpose does not tell us when it does not accept the given input data (e.g. missing field).
+    // Purpose does not tell us when it does not accept the given input data (e.g.
+    // missing field).
     if (alternativesModel->rowCount() == 0) {
         qWarning() << "Failed to find any share providers for the given data";
         // NOTE WebShare API asks not to disclose the failure to find a provider
         // to the caller but we can't just leave the menu dangling.
-        sendPendingReply(false,
-                         {
-                             {QStringLiteral("errorCode"), QStringLiteral("INVALID_ARGUMENT")},
-                         });
+        sendPendingReply(false, {
+                                    {QStringLiteral("errorCode"), QStringLiteral("INVALID_ARGUMENT")},
+                                });
         return;
     }
 
     m_menu->popup(QCursor::pos());
 }
 
-bool PurposePlugin::eventFilter(QObject *watched, QEvent *event)
+bool PurposePlugin::eventFilter(QObject* watched, QEvent* event)
 {
     if (event->type() == QEvent::WindowDeactivate && watched == m_menu.data()) {
         m_menu->hide();
