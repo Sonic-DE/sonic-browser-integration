@@ -2,6 +2,10 @@
 
 Sonic Browser Integration connects your web browser to SonicDE, so media controls, downloads and browser tabs work together with your desktop.
 
+## 6.8.2 (2026-11-10)
+
+No SonicDE-specific changes in this release; it brings the package up to date with upstream.
+
 ## 6.8.0 (2026-10-20)
 
 - Behind the scenes: version update and refreshed dependency versions.
